@@ -135,7 +135,31 @@
   color: #9ad1ff;
   margin-top: 5px;
   }
-  
+
+  .radio-group {
+    display: flex;
+    gap: 20px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  .radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 0;
+    font-weight: normal;
+    color: #e0e0e0;
+    cursor: pointer;
+  }
+
+  .radio-group input[type="radio"] {
+    width: auto;
+    margin: 0;
+    accent-color: #2979ff;
+    cursor: pointer;
+  }
+
 </style>
 </head>
 <body>
@@ -143,18 +167,29 @@
 <h2>Windows 11 Wi-Fi TEAP XML Generator</h2>
 
 <div class="readme">
-  Generates an XML file for Windows 11 Wi-Fi TEAP Authentication to be deployed using an Intune Custom Configuration Profile using the following OMA-URI:<br>
+  Generates an XML file for Windows 11 Wi-Fi 802.1X Authentication to be deployed using an Intune Custom Configuration Profile using the following OMA-URI:<br>
   <code>./Vendor/MSFT/WiFi/Profile/&lt;SSID Name&gt;/WlanXml</code>
 
   <br><br>
   <strong>Configuration includes:</strong>
   <ul>
-    <li>Outer identity of <code>anonymous</code></li>
-    <li>EAP-TLS for both TEAP inner-methods</li>
-    <li>Server Certificate validation</li>
-    <li>Prompt to authorize new servers disabled</li>
+    <li>Server Certificate validation with prompt disabled</li>
     <li>Simple Certificate selection with 'Client Authentication' EKU and specific Issuing CA</li>
+    <li><strong>TEAP:</strong> Outer identity of <code>anonymous</code>, EAP-TLS for both inner methods</li>
+    <li><strong>EAP-TLS:</strong> EAP-TLS User or Computer authentication</li>
   </ul>
+</div>
+
+<label>EAP Method</label>
+<div class="radio-group">
+  <label><input type="radio" name="eapMethod" value="teap" checked> TEAP</label>
+  <label><input type="radio" name="eapMethod" value="eaptls"> EAP-TLS</label>
+</div>
+
+<label>Authentication &amp; Encryption</label>
+<div class="radio-group">
+  <label><input type="radio" name="wpa" value="wpa2" checked> WPA2-Enterprise</label>
+  <label><input type="radio" name="wpa" value="wpa3"> WPA3-Enterprise 192-bit</label>
 </div>
 
 <label>SSID Name</label>
@@ -181,7 +216,7 @@
 <div id="toast">Copied to clipboard!</div>
 
 <script>
-  const template = `<?xml version="1.0"?>
+  const teapTemplate = `<?xml version="1.0"?>
 <WLANProfile xmlns="http://www.microsoft.com/networking/WLAN/profile/v1">
   <name>{{SSID_NAME}}</name>
   <SSIDConfig>
@@ -197,8 +232,8 @@
   <MSM>
     <security>
       <authEncryption>
-        <authentication>WPA2</authentication>
-        <encryption>AES</encryption>
+        <authentication>{{AUTHENTICATION}}</authentication>
+        <encryption>{{ENCRYPTION}}</encryption>
         <useOneX>true</useOneX>
       </authEncryption>
       <PMKCacheMode>enabled</PMKCacheMode>
@@ -209,6 +244,39 @@
         <cacheUserData>true</cacheUserData>
         <authMode>machineOrUser</authMode>
         <EAPConfig><EapHostConfig xmlns="http://www.microsoft.com/provisioning/EapHostConfig"><EapMethod><Type xmlns="http://www.microsoft.com/provisioning/EapCommon">55</Type><VendorId xmlns="http://www.microsoft.com/provisioning/EapCommon">0</VendorId><VendorType xmlns="http://www.microsoft.com/provisioning/EapCommon">0</VendorType><AuthorId xmlns="http://www.microsoft.com/provisioning/EapCommon">311</AuthorId></EapMethod><Config xmlns="http://www.microsoft.com/provisioning/EapHostConfig"><EapTeap xmlns="http://www.microsoft.com/provisioning/EapTeapConnectionPropertiesV1"><ServerValidation><ServerNames>{{AUTH_SERVER_CN}}</ServerNames><TrustedRootCAHash>{{ROOT_CA_HASH_NOSPACES}}</TrustedRootCAHash><DisablePrompt>true</DisablePrompt><DownloadTrustedServerRoot>false</DownloadTrustedServerRoot></ServerValidation><Phase2Authentication><InnerMethodConfig><EapHostConfig xmlns="http://www.microsoft.com/provisioning/EapHostConfig"><EapMethod><Type xmlns="http://www.microsoft.com/provisioning/EapCommon">13</Type><VendorId xmlns="http://www.microsoft.com/provisioning/EapCommon">0</VendorId><VendorType xmlns="http://www.microsoft.com/provisioning/EapCommon">0</VendorType><AuthorId xmlns="http://www.microsoft.com/provisioning/EapCommon">0</AuthorId></EapMethod><Config xmlns="http://www.microsoft.com/provisioning/EapHostConfig"><Eap xmlns="http://www.microsoft.com/provisioning/BaseEapConnectionPropertiesV1"><Type>13</Type><EapType xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV1"><CredentialsSource><CertificateStore><SimpleCertSelection>true</SimpleCertSelection></CertificateStore></CredentialsSource><ServerValidation><DisableUserPromptForServerValidation>true</DisableUserPromptForServerValidation><ServerNames>{{AUTH_SERVER_CN}}</ServerNames><TrustedRootCA>{{ROOT_CA_THUMBPRINT}} </TrustedRootCA></ServerValidation><DifferentUsername>false</DifferentUsername><PerformServerValidation xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV2">true</PerformServerValidation><AcceptServerName xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV2">true</AcceptServerName><TLSExtensions xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV2"><FilteringInfo xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV3"><CAHashList Enabled="true"><IssuerHash>{{CLIENT_ISSUER_CA_THUMBPRINT}} </IssuerHash></CAHashList><ClientAuthEKUList Enabled="true"/></FilteringInfo></TLSExtensions></EapType></Eap></Config></EapHostConfig></InnerMethodConfig><InnerMethodConfig><EapHostConfig xmlns="http://www.microsoft.com/provisioning/EapHostConfig"><EapMethod><Type xmlns="http://www.microsoft.com/provisioning/EapCommon">13</Type><VendorId xmlns="http://www.microsoft.com/provisioning/EapCommon">0</VendorId><VendorType xmlns="http://www.microsoft.com/provisioning/EapCommon">0</VendorType><AuthorId xmlns="http://www.microsoft.com/provisioning/EapCommon">0</AuthorId></EapMethod><Config xmlns="http://www.microsoft.com/provisioning/EapHostConfig"><Eap xmlns="http://www.microsoft.com/provisioning/BaseEapConnectionPropertiesV1"><Type>13</Type><EapType xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV1"><CredentialsSource><CertificateStore><SimpleCertSelection>true</SimpleCertSelection></CertificateStore></CredentialsSource><ServerValidation><DisableUserPromptForServerValidation>true</DisableUserPromptForServerValidation><ServerNames>{{AUTH_SERVER_CN}}</ServerNames><TrustedRootCA>{{ROOT_CA_THUMBPRINT}} </TrustedRootCA></ServerValidation><DifferentUsername>false</DifferentUsername><PerformServerValidation xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV2">true</PerformServerValidation><AcceptServerName xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV2">true</AcceptServerName><TLSExtensions xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV2"><FilteringInfo xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV3"><CAHashList Enabled="true"><IssuerHash>{{CLIENT_ISSUER_CA_THUMBPRINT}} </IssuerHash></CAHashList><ClientAuthEKUList Enabled="true"/></FilteringInfo></TLSExtensions></EapType></Eap></Config></EapHostConfig></InnerMethodConfig></Phase2Authentication><Phase1Identity><IdentityPrivacy>true</IdentityPrivacy><AnonymousIdentity>anonymous</AnonymousIdentity></Phase1Identity></EapTeap></Config></EapHostConfig></EAPConfig>
+      </OneX>
+    </security>
+  </MSM>
+</WLANProfile>`;
+
+  const eapTlsTemplate = `<?xml version="1.0"?>
+<WLANProfile xmlns="http://www.microsoft.com/networking/WLAN/profile/v1">
+  <name>{{SSID_NAME}}</name>
+  <SSIDConfig>
+    <SSID>
+      <hex>{{SSID_HEX}}</hex>
+      <name>{{SSID_NAME}}</name>
+    </SSID>
+    <nonBroadcast>false</nonBroadcast>
+  </SSIDConfig>
+  <connectionType>ESS</connectionType>
+  <connectionMode>auto</connectionMode>
+  <autoSwitch>false</autoSwitch>
+  <MSM>
+    <security>
+      <authEncryption>
+        <authentication>{{AUTHENTICATION}}</authentication>
+        <encryption>{{ENCRYPTION}}</encryption>
+        <useOneX>true</useOneX>
+      </authEncryption>
+      <PMKCacheMode>enabled</PMKCacheMode>
+      <PMKCacheTTL>720</PMKCacheTTL>
+      <PMKCacheSize>128</PMKCacheSize>
+      <preAuthMode>disabled</preAuthMode>
+      <OneX xmlns="http://www.microsoft.com/networking/OneX/v1">
+        <cacheUserData>true</cacheUserData>
+        <authMode>machineOrUser</authMode>
+        <EAPConfig><EapHostConfig xmlns="http://www.microsoft.com/provisioning/EapHostConfig"><EapMethod><Type xmlns="http://www.microsoft.com/provisioning/EapCommon">13</Type><VendorId xmlns="http://www.microsoft.com/provisioning/EapCommon">0</VendorId><VendorType xmlns="http://www.microsoft.com/provisioning/EapCommon">0</VendorType><AuthorId xmlns="http://www.microsoft.com/provisioning/EapCommon">0</AuthorId></EapMethod><Config xmlns="http://www.microsoft.com/provisioning/EapHostConfig"><Eap xmlns="http://www.microsoft.com/provisioning/BaseEapConnectionPropertiesV1"><Type>13</Type><EapType xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV1"><CredentialsSource><CertificateStore><SimpleCertSelection>true</SimpleCertSelection></CertificateStore></CredentialsSource><ServerValidation><DisableUserPromptForServerValidation>true</DisableUserPromptForServerValidation><ServerNames>{{AUTH_SERVER_CN}}</ServerNames><TrustedRootCA>{{ROOT_CA_THUMBPRINT}} </TrustedRootCA></ServerValidation><DifferentUsername>false</DifferentUsername><PerformServerValidation xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV2">true</PerformServerValidation><AcceptServerName xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV2">true</AcceptServerName><TLSExtensions xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV2"><FilteringInfo xmlns="http://www.microsoft.com/provisioning/EapTlsConnectionPropertiesV3"><CAHashList Enabled="true"><IssuerHash>{{CLIENT_ISSUER_CA_THUMBPRINT}} </IssuerHash></CAHashList><ClientAuthEKUList Enabled="true"/></FilteringInfo></TLSExtensions></EapType></Eap></Config></EapHostConfig></EAPConfig>
       </OneX>
     </security>
   </MSM>
@@ -290,13 +358,23 @@ function generateXML() {
     return;
   }
 
-  const xml = template
+  const eapMethod = document.querySelector('input[name="eapMethod"]:checked').value;
+  const wpa = document.querySelector('input[name="wpa"]:checked').value;
+
+  const auth = wpa === "wpa3" ? "WPA3ENT192" : "WPA2";
+  const enc  = wpa === "wpa3" ? "GCMP256"    : "AES";
+
+  const base = eapMethod === "eaptls" ? eapTlsTemplate : teapTemplate;
+
+  const xml = base
     .replaceAll("{{SSID_NAME}}", ssid)
     .replaceAll("{{SSID_HEX}}", ssidToHex(ssid))
-    .replaceAll("{{AUTH_SERVER_CN}}", document.getElementById("servercn").value)
+    .replaceAll("{{AUTHENTICATION}}", auth)
+    .replaceAll("{{ENCRYPTION}}", enc)
+    .replaceAll("{{AUTH_SERVER_CN}}", serverCN)
     .replaceAll("{{ROOT_CA_THUMBPRINT}}", root.dataset.thumbprint || "")
     .replaceAll("{{ROOT_CA_HASH_NOSPACES}}", root.dataset.nospaces || "")
-    .replaceAll("{{CLIENT_ISSUER_CA_THUMBPRINT}}", document.getElementById("issuerCert").dataset.thumbprint || "");
+    .replaceAll("{{CLIENT_ISSUER_CA_THUMBPRINT}}", issuer.dataset.thumbprint || "");
 
   document.getElementById("output").value = xml+'\n';
 }
